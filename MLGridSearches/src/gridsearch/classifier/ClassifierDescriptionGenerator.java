@@ -3,10 +3,13 @@ package gridsearch.classifier;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -20,11 +23,15 @@ import hasco.serialization.CompositionSerializer;
 import hasco.variants.forwarddecomposition.HASCOViaFD;
 import jaicore.basic.FileUtil;
 import jaicore.basic.algorithm.events.AlgorithmEvent;
+import jaicore.basic.algorithm.events.AlgorithmFinishedEvent;
 import jaicore.basic.algorithm.reduction.AlgorithmicProblemReduction;
 import jaicore.basic.algorithm.reduction.IdentityReduction;
+import jaicore.basic.sets.SetUtil;
 import jaicore.experiments.IExperimentJSONKeyGenerator;
 import jaicore.planning.hierarchical.algorithms.forwarddecomposition.graphgenerators.tfd.TFDNode;
+import jaicore.search.algorithms.standard.auxilliary.iteratingoptimizer.IteratingGraphSearchOptimizer;
 import jaicore.search.algorithms.standard.auxilliary.iteratingoptimizer.IteratingGraphSearchOptimizerFactory;
+import jaicore.search.algorithms.standard.dfs.DepthFirstSearch;
 import jaicore.search.algorithms.standard.dfs.DepthFirstSearchFactory;
 import jaicore.search.core.interfaces.IOptimalPathInORGraphSearchFactory;
 import jaicore.search.model.other.EvaluatedSearchGraphPath;
@@ -35,6 +42,7 @@ public class ClassifierDescriptionGenerator implements IExperimentJSONKeyGenerat
 	private final HASCO<?, ?, ?, ?> hasco;
 	private List<ObjectNode> configurations;
 	private final RefinementConfiguredSoftwareConfigurationProblem<Double> problem;
+	private final int maxSolutionsPerRun = 50000;
 
 	public ClassifierDescriptionGenerator() throws IOException {
 		super();
@@ -74,10 +82,22 @@ public class ClassifierDescriptionGenerator implements IExperimentJSONKeyGenerat
 		}
 		Set<ComponentInstance> solutions = new HashSet<>();
 		File cachedFile = new File(problem.hashCode() + ".configs");
+		File currentSearchFile = new File("dfs.state");
 		StringBuilder sb = new StringBuilder();
 		int numSolutions = 0;
 		configurations = new ArrayList<>();
-		if (!cachedFile.exists()) {
+		DepthFirstSearch<?, ?> dfs = (DepthFirstSearch)((IteratingGraphSearchOptimizer)hasco.getSearch()).getBaseAlgorithm();
+		if (!cachedFile.exists() || currentSearchFile.exists()) {
+			if (currentSearchFile.exists()) {
+				List<Integer> decisions = SetUtil.unserializeList(FileUtil.readFileAsString(currentSearchFile).trim()).stream().map(Integer::valueOf).collect(Collectors.toList());
+				int[] decisionsAsArray = new int[decisions.size()];
+				for (int i = 0; i < decisionsAsArray.length; i++) {
+					decisionsAsArray[i] = decisions.get(i);
+				}
+				System.out.println(Arrays.toString(decisionsAsArray));
+				dfs.setCurrentPath(decisionsAsArray);
+				Files.delete(currentSearchFile.toPath());
+			}
 			//			new JFXPanel();
 			//			Platform.runLater(new AlgorithmVisualizationWindow(hasco, new GraphViewPlugin(), new NodeInfoGUIPlugin<>(new TFDNodeInfoGenerator())));
 			for (AlgorithmEvent e : hasco) {
@@ -89,12 +109,23 @@ public class ClassifierDescriptionGenerator implements IExperimentJSONKeyGenerat
 					configurations.add(on);
 					sb.append(on.toString() + "\n");
 					numSolutions ++;
+					
 					if (numSolutions % 100 == 0) {
 						System.out.println("Found " + numSolutions + " so far.");
 					}
+					
+					/* if we have the limit of solutions reached, write the candidates into the output file and quit */
+					if (numSolutions == maxSolutionsPerRun) {
+						System.out.print("Serializing to " + currentSearchFile.getAbsolutePath());
+						try (FileWriter fw = new FileWriter(currentSearchFile)) {
+							fw.write(Arrays.toString(dfs.getDecisionIndicesForCurrentPath()));
+						}
+						System.out.println(" [done]");
+						break;
+					}
 				}
 			}
-			try (FileWriter fw = new FileWriter(cachedFile)) {
+			try (FileWriter fw = new FileWriter(cachedFile, true)) {
 				fw.write(sb.toString());
 			}
 		}
