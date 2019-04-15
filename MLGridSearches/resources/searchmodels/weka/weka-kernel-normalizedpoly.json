@@ -1,0 +1,13 @@
+{
+	"repository": "Normalized Polynomial Kernel Grid",
+	"components": [
+		{
+			"name": "weka.classifiers.functions.supportVector.NormalizedPolyKernel",
+			"requiredInterface": [],
+			"providedInterface": [
+				"K"
+			],
+			"parameter": []
+		}
+	]
+}
