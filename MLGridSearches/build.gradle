@@ -53,9 +53,7 @@ dependencies {
  	compile "de.upb.isys:jaicore-search"
  	compile "de.upb.isys:jaicore-planning"
  	compile "de.upb.isys:jaicore-ml"
- 	compile "de.upb.isys:hasco"
- 	compile "de.upb.isys:mlplan"
-	
+ 	
 	runtime 'org.slf4j:slf4j-log4j12:1.7.25', 'log4j:log4j:1.2.17'
 }
 
