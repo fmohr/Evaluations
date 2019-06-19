@@ -1,0 +1,13 @@
+{
+	"repository": "RBF Kernel Grid",
+	"components": [
+		{
+			"name": "weka.classifiers.functions.supportVector.RBFKernel",
+			"requiredInterface": [],
+			"providedInterface": [
+				"K"
+			],
+			"parameter": []
+		}
+	]
+}
