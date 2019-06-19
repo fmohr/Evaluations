@@ -47,12 +47,13 @@ dependencies {
 	compile group: 'com.github.fommil.netlib', name: 'core', version: '1.1.2'
 
 	// dependencies for development time
-	compile "de.upb.isys:jaicore-experiments"
- 	compile "de.upb.isys:jaicore-basic"
- 	compile "de.upb.isys:jaicore-logic"
- 	compile "de.upb.isys:jaicore-search"
- 	compile "de.upb.isys:jaicore-planning"
- 	compile "de.upb.isys:jaicore-ml"
+	compile "ai.libs:jaicore-experiments"
+ 	compile "ai.libs:jaicore-basic"
+ 	compile "ai.libs:jaicore-logic"
+ 	compile "ai.libs:jaicore-search"
+ 	compile "ai.libs:jaicore-planning"
+ 	compile "ai.libs:jaicore-ml"
+ 	compile "ai.libs:hasco"
  	
 	runtime 'org.slf4j:slf4j-log4j12:1.7.25', 'log4j:log4j:1.2.17'
 }

@@ -1,0 +1,4 @@
+{
+	"repository" : "SMO with polynomial kernel",
+	"include": ["./weka-classifiers-smo.json", "./weka-kernel-poly.json"]
+}
