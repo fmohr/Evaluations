@@ -54,6 +54,7 @@ dependencies {
  	compile "ai.libs:jaicore-planning"
  	compile "ai.libs:jaicore-ml"
  	compile "ai.libs:hasco"
+ 	compile "ai.libs:mlplan"
  	
 	runtime 'org.slf4j:slf4j-log4j12:1.7.25', 'log4j:log4j:1.2.17'
 }

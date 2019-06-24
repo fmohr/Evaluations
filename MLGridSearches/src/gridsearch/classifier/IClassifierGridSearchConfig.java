@@ -10,5 +10,4 @@ import ai.libs.jaicore.experiments.IExperimentSetConfig;
 @LoadPolicy(LoadType.MERGE)
 @Sources({ "file:./conf/gridsearch.cfg", "file:./conf/database.cfg" })
 public interface IClassifierGridSearchConfig extends IExperimentSetConfig, IDatabaseConfig {
-
 }
