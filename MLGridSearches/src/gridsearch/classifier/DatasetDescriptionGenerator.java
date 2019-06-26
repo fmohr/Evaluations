@@ -1,20 +1,17 @@
 package gridsearch.classifier;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import ai.libs.jaicore.basic.sets.Pair;
 import ai.libs.jaicore.experiments.IExperimentJSONKeyGenerator;
-import ai.libs.jaicore.ml.WekaUtil;
-import ai.libs.jaicore.ml.cache.DataProvider;
-import ai.libs.jaicore.ml.cache.FoldBasedSubsetInstruction;
-import ai.libs.jaicore.ml.cache.Instruction;
-import ai.libs.jaicore.ml.cache.LoadDataSetInstruction;
+import ai.libs.jaicore.ml.cache.InstructionGraph;
+import ai.libs.jaicore.ml.cache.LoadDatasetInstructionForOpenML;
+import ai.libs.jaicore.ml.cache.StratifiedSplitSubsetInstruction;
 
 public class DatasetDescriptionGenerator implements IExperimentJSONKeyGenerator {
 
@@ -35,50 +32,36 @@ public class DatasetDescriptionGenerator implements IExperimentJSONKeyGenerator 
 	public JsonNode getValue(final int i) {
 		int seed = i % this.SEEDS;
 		int datasetId = Math.floorDiv(i, this.SEEDS);
-		LoadDataSetInstruction loadInstruction = new LoadDataSetInstruction(DataProvider.OPENML, String.valueOf(this.openMLIDs[datasetId]));
-		FoldBasedSubsetInstruction trainInstruction = new FoldBasedSubsetInstruction(WekaUtil.class.getName() + "::getStratifiedSplit(<IN>, " + seed + ", .7)", 0);
-		FoldBasedSubsetInstruction testInstruction = new FoldBasedSubsetInstruction(WekaUtil.class.getName() + "::getStratifiedSplit(<IN>, " + seed + ", .7)", 1);
-
-		/* create JSON representation of dataset */
-		ObjectMapper om = new ObjectMapper();
-		ArrayNode node = om.createArrayNode();
-
-		try {
-			node.add(om.createArrayNode().add(om.readTree(om.writeValueAsString(loadInstruction))));
-			ArrayNode trainTestLevel = om.createArrayNode();
-			trainTestLevel.add(om.readTree(om.writeValueAsString(trainInstruction)));
-			trainTestLevel.add(om.readTree(om.writeValueAsString(testInstruction)));
-			node.add(trainTestLevel);
-			return node;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
+		InstructionGraph graph = new InstructionGraph();
+		graph.addNode("load", new LoadDatasetInstructionForOpenML("", this.openMLIDs[datasetId]));
+		graph.addNode("split", new StratifiedSplitSubsetInstruction(seed, .7), Arrays.asList(new Pair<>("load", 0)));
+		return new ObjectMapper().valueToTree(graph);
 	}
 
-	private LoadDataSetInstruction getLoadInstructionForDescription(final ArrayNode description) {
-		JsonNode baseNode = description.get(0).get(0);
-		JsonNode inputNodeOfLoadOperation = baseNode.get("inputs");
-		String providerAsString = inputNodeOfLoadOperation.get("provider").asText();
-		DataProvider provider = DataProvider.valueOf(providerAsString);
-		String id = inputNodeOfLoadOperation.get("id").asText();
-		return new LoadDataSetInstruction(provider, id);
-	}
-
-	public List<Instruction> getInstructionsForTrainSet(final ArrayNode description) {
-		List<Instruction> instructions = new ArrayList<>(2);
-		instructions.add(this.getLoadInstructionForDescription(description));
-		JsonNode trainInputs = description.get(1).get(0).get("inputs");
-		instructions.add(new FoldBasedSubsetInstruction(trainInputs.get("foldTechnique").asText(), trainInputs.get("outIndices").get(0).asInt()));
-		return instructions;
-	}
-
-	public List<Instruction> getInstructionsForTestSet(final ArrayNode description) {
-		List<Instruction> instructions = new ArrayList<>(2);
-		instructions.add(this.getLoadInstructionForDescription(description));
-		JsonNode testInputs = description.get(1).get(1).get("inputs");
-		instructions.add(new FoldBasedSubsetInstruction(testInputs.get("foldTechnique").asText(), testInputs.get("outIndices").get(0).asInt()));
-		return instructions;
-	}
+	//	private LoadDataSetInstruction getLoadInstructionForDescription(final ArrayNode description) {
+	//		JsonNode baseNode = description.get(0).get(0);
+	//		JsonNode inputNodeOfLoadOperation = baseNode.get("inputs");
+	//		String providerAsString = inputNodeOfLoadOperation.get("provider").asText();
+	//		DataProvider provider = DataProvider.valueOf(providerAsString);
+	//		String id = inputNodeOfLoadOperation.get("id").asText();
+	//		return new LoadDataSetInstruction(provider, id);
+	//	}
+	//
+	//	public List<Instruction> getInstructionsForTrainSet(final ArrayNode description) {
+	//		List<Instruction> instructions = new ArrayList<>(2);
+	//		instructions.add(this.getLoadInstructionForDescription(description));
+	//		JsonNode trainInputs = description.get(1).get(0).get("inputs");
+	//		instructions.add(new FoldBasedSubsetInstruction(trainInputs.get("foldTechnique").asText(), trainInputs.get("outIndices").get(0).asInt()));
+	//		return instructions;
+	//	}
+	//
+	//	public List<Instruction> getInstructionsForTestSet(final ArrayNode description) {
+	//		List<Instruction> instructions = new ArrayList<>(2);
+	//		instructions.add(this.getLoadInstructionForDescription(description));
+	//		JsonNode testInputs = description.get(1).get(1).get("inputs");
+	//		instructions.add(new FoldBasedSubsetInstruction(testInputs.get("foldTechnique").asText(), testInputs.get("outIndices").get(0).asInt()));
+	//		return instructions;
+	//	}
 
 	@Override
 	public boolean isValueValid(final String value) {

@@ -6,22 +6,26 @@ import java.util.Map;
 
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
 
 import ai.libs.hasco.model.Component;
 import ai.libs.hasco.model.ComponentInstance;
 import ai.libs.hasco.serialization.ComponentInstanceDeserializer;
+import ai.libs.jaicore.basic.sets.Pair;
 import ai.libs.jaicore.experiments.ExperimentDBEntry;
 import ai.libs.jaicore.experiments.IExperimentIntermediateResultProcessor;
 import ai.libs.jaicore.experiments.IExperimentSetEvaluator;
 import ai.libs.jaicore.experiments.exceptions.ExperimentEvaluationFailedException;
-import ai.libs.jaicore.ml.cache.ReproducibleInstances;
+import ai.libs.jaicore.ml.cache.InstructionGraph;
+import ai.libs.jaicore.ml.core.dataset.weka.WekaInstances;
+import ai.libs.jaicore.timing.TimedComputation;
 import ai.libs.mlplan.multiclass.wekamlplan.weka.WEKAPipelineFactory;
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.core.Instances;
 
 public class ClassifierGridSearchEvaluator implements IExperimentSetEvaluator {
+
+	private static final long TIMEOUT_IN_SECONDS = 900; // 15 minutes per classifier is maximum
 
 	private final Collection<Component> components;
 	private final DatasetDescriptionGenerator generator = new DatasetDescriptionGenerator();
@@ -42,16 +46,19 @@ public class ClassifierGridSearchEvaluator implements IExperimentSetEvaluator {
 			Classifier c = factory.getComponentInstantiation(ci);
 
 			/* get dataset */
-			ArrayNode splitDescription = (ArrayNode)new ObjectMapper().readTree(keys.get("dataset"));
-			Instances train = ReproducibleInstances.fromHistory(this.generator.getInstructionsForTrainSet(splitDescription), "");
-			Instances test = ReproducibleInstances.fromHistory(this.generator.getInstructionsForTestSet(splitDescription), "");
+			InstructionGraph graph = new ObjectMapper().readValue(keys.get("dataset"), InstructionGraph.class);
+			Instances train = ((WekaInstances<Object>)graph.getDataForUnit(new Pair<>("split", 0))).getList();
+			Instances test = ((WekaInstances<Object>)graph.getDataForUnit(new Pair<>("split", 1))).getList();
 
 			/* prepare evaluation */
 			Evaluation eval = new Evaluation(train);
 
 			/* train classifier */
 			long startTrain = System.currentTimeMillis();
-			c.buildClassifier(train);
+			TimedComputation.compute(() -> {
+				c.buildClassifier(train);
+				return null;
+			}, TIMEOUT_IN_SECONDS * 1000, "Classifier training timed out");
 			Map<String, Object> results = new HashMap<>();
 			results.put("time_train", System.currentTimeMillis() - startTrain);
 			processor.processResults(results);
