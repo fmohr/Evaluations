@@ -23,7 +23,7 @@ public class ClassifierGridSearch {
 		/* run evaluation */
 		ExperimentRunner runner = new ExperimentRunner(config, evaluator, dbHandle);
 		//		runner.createExperiments();
-		runner.randomlyConductExperiments();
+		runner.randomlyConductExperiments(1);
 	}
 }
 
