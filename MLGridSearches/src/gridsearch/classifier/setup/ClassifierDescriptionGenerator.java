@@ -1,4 +1,4 @@
-package gridsearch.classifier;
+package gridsearch.classifier.setup;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -42,7 +42,7 @@ import ai.libs.jaicore.search.probleminputs.GraphSearchWithPathEvaluationsInput;
 public class ClassifierDescriptionGenerator implements IExperimentJSONKeyGenerator {
 
 	private final Logger logger = LoggerFactory.getLogger(ClassifierDescriptionGenerator.class);
-	public static final File CONF_FILE = new File("resources/searchmodels/weka/weka-classifiers-smo-poly.json");
+	public static final File CONF_FILE = new File("resources/searchmodels/weka/gridsearch.json");
 	private final HASCO<?, ?, ?, ?> hasco;
 	private List<ObjectNode> configurations;
 	private final RefinementConfiguredSoftwareConfigurationProblem<Double> problem;
@@ -50,7 +50,8 @@ public class ClassifierDescriptionGenerator implements IExperimentJSONKeyGenerat
 
 	public ClassifierDescriptionGenerator() throws IOException {
 		super();
-		/* create a HASCO obejct */
+
+		/* create a HASCO object */
 		this.problem = new RefinementConfiguredSoftwareConfigurationProblem<>(CONF_FILE, "AbstractClassifier", n -> 0.0);
 		IOptimalPathInORGraphSearchFactory<GraphSearchWithPathEvaluationsInput<TFDNode, String, Double>, TFDNode, String, Double> searchFactory = new IteratingGraphSearchOptimizerFactory<>(new DepthFirstSearchFactory<>());
 		AlgorithmicProblemReduction<GraphSearchWithPathEvaluationsInput<TFDNode, String, Double>, EvaluatedSearchGraphPath<TFDNode, String, Double>, GraphSearchWithPathEvaluationsInput<TFDNode, String, Double>, EvaluatedSearchGraphPath<TFDNode, String, Double>> searchProblemTransformer = new IdentityReduction<>();

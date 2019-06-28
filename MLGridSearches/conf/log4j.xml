@@ -87,4 +87,16 @@
     <appender-ref ref="errFileAppender" />
     <appender-ref ref="traceFileAppender" />
   </logger>
+  
+  <logger name="gridsearch.relationcomputer">
+  	<level value="info" />
+  </logger>
+  
+  <logger name="gridsearch.handle.adapter">
+  	<level value="info" />
+  </logger>
+  
+  <logger name="gridsearch.relationcomputer.filter">
+  	<level value="warn" />
+  </logger>
 </log4j:configuration>

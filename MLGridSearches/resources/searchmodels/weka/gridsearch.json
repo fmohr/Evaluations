@@ -1,0 +1,4 @@
+{
+	"repository" : "Gridsearch",
+	"include": ["./weka-classifiers-singlelabel-reduction.json", "./weka-classifiers-smo-poly.json"]
+}
