@@ -69,7 +69,7 @@ repositories {
 
 task evaluationFatJar(type: Jar) {
     manifest {
-		attributes 'Main-Class': 'gridsearch.classifier.ClassifierGridSearch'
+		attributes 'Main-Class': 'gridsearch.classifier.GridSearchExperimentRunner'
     }
     zip64 = true
     baseName = 'gridsearch'
