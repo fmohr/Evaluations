@@ -55,6 +55,14 @@
     <appender-ref ref="traceFileAppender" />
   </logger>
   
+  <logger name="ai.libs.jaicore.interrupt">
+    <level value="info" />
+  </logger>
+  
+  <logger name="ai.libs.jaicore.timing">
+    <level value="debug" />
+  </logger>
+  
   <logger name="ai.libs.hasco">
    <level value="warn" />
        <appender-ref ref="console" />
@@ -65,7 +73,7 @@
   </logger>
   
   <logger name="testedalgorithm">
-    <level value="info" />
+    <level value="debug" />
     
     <appender-ref ref="console" />
     <appender-ref ref="infoFileAppender" />
@@ -92,8 +100,12 @@
   	<level value="info" />
   </logger>
   
+  <logger name="gridsearch.handle">
+  	<level value="debug" />
+  </logger>
+  
   <logger name="gridsearch.handle.adapter">
-  	<level value="info" />
+  	<level value="debug" />
   </logger>
   
   <logger name="gridsearch.relationcomputer.filter">

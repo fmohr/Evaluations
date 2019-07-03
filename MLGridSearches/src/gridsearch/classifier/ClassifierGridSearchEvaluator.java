@@ -1,8 +1,13 @@
 package gridsearch.classifier;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,6 +15,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import ai.libs.hasco.model.Component;
 import ai.libs.hasco.model.ComponentInstance;
 import ai.libs.hasco.serialization.ComponentInstanceDeserializer;
+import ai.libs.jaicore.basic.ILoggingCustomizable;
+import ai.libs.jaicore.basic.MathExt;
 import ai.libs.jaicore.basic.sets.Pair;
 import ai.libs.jaicore.experiments.ExperimentDBEntry;
 import ai.libs.jaicore.experiments.IExperimentIntermediateResultProcessor;
@@ -19,13 +26,15 @@ import ai.libs.jaicore.ml.WekaUtil;
 import ai.libs.jaicore.ml.cache.InstructionGraph;
 import ai.libs.jaicore.ml.core.dataset.weka.WekaInstances;
 import ai.libs.jaicore.timing.TimedComputation;
-import ai.libs.mlplan.multiclass.wekamlplan.weka.WEKAPipelineFactory;
+import ai.libs.mlplan.multiclass.wekamlplan.weka.WekaPipelineFactory;
 import weka.classifiers.Classifier;
-import weka.classifiers.Evaluation;
 import weka.classifiers.meta.MultiClassClassifier;
+import weka.core.Instance;
 import weka.core.Instances;
 
-public class ClassifierGridSearchEvaluator implements IExperimentSetEvaluator {
+public class ClassifierGridSearchEvaluator implements IExperimentSetEvaluator, ILoggingCustomizable {
+
+	private Logger logger = LoggerFactory.getLogger(ClassifierGridSearchEvaluator.class);
 
 	private final long timeoutInSeconds;
 
@@ -44,7 +53,7 @@ public class ClassifierGridSearchEvaluator implements IExperimentSetEvaluator {
 			/* get algorithm */
 			TreeNode tn = new ObjectMapper().readTree(keys.get("algorithm"));
 			ComponentInstance ci = new ComponentInstanceDeserializer(this.components).readAsTree(tn) ;
-			WEKAPipelineFactory factory = new WEKAPipelineFactory();
+			WekaPipelineFactory factory = new WekaPipelineFactory();
 			Classifier c = factory.getComponentInstantiation(ci);
 			boolean isBinaryClassifier = WekaUtil.getBinaryClassifiers().contains(c.getClass().getSimpleName());
 
@@ -62,11 +71,9 @@ public class ClassifierGridSearchEvaluator implements IExperimentSetEvaluator {
 				throw new IllegalArgumentException("Use MultiClassClassifier only for datasets with more than two classes.");
 			}
 
-			/* prepare evaluation */
-			Evaluation eval = new Evaluation(train);
-
 			/* train classifier */
 			long startTrain = System.currentTimeMillis();
+			this.logger.info("Starting evaluation of classifier {} on dataset {} with timeout {}s", c, train.relationName(), this.timeoutInSeconds);
 			TimedComputation.compute(() -> {
 				c.buildClassifier(train);
 				return null;
@@ -75,22 +82,45 @@ public class ClassifierGridSearchEvaluator implements IExperimentSetEvaluator {
 			results.put("time_train", System.currentTimeMillis() - startTrain);
 			processor.processResults(results);
 
-			/* compute zero-one loss on training data */
+			/* compute confusion matrix on training data */
 			results.clear();
-			eval.evaluateModel(c, train);
-			results.put("zoloss_train", eval.errorRate());
+			results.put("predictions_train", new ObjectMapper().writeValueAsString(this.getPredictions(c, train)));
 			processor.processResults(results);
 
 			/* compute zero-one loss on test data */
 			results.clear();
 			long startEvaluation = System.currentTimeMillis();
-			eval.evaluateModel(c, test);
 			results.put("time_predict", System.currentTimeMillis() - startEvaluation);
-			results.put("zoloss_test", eval.errorRate());
+			results.put("predictions_test", new ObjectMapper().writeValueAsString(this.getPredictions(c, test)));
 			processor.processResults(results);
 		}
 		catch (Exception e) {
 			throw new ExperimentEvaluationFailedException(e);
 		}
+	}
+
+	private List<List<Number>> getPredictions(final Classifier trainedClassifier, final Instances data) throws Exception {
+		List<List<Number>> list = new ArrayList<>(data.size());
+		int numClasses = data.numClasses();
+		for (Instance i : data) {
+			List<Number> vals = new ArrayList<>(2 + numClasses);
+			vals.add(i.classValue());
+			vals.add((int)trainedClassifier.classifyInstance(i));
+			for (double prob : trainedClassifier.distributionForInstance(i)) {
+				vals.add(MathExt.round(prob, 4));
+			}
+			list.add(vals);
+		}
+		return list;
+	}
+
+	@Override
+	public String getLoggerName() {
+		return this.logger.getName();
+	}
+
+	@Override
+	public void setLoggerName(final String name) {
+		this.logger = LoggerFactory.getLogger(name);
 	}
 }
