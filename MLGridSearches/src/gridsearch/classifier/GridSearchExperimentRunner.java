@@ -13,7 +13,7 @@ import ai.libs.jaicore.experiments.exceptions.ExperimentDBInteractionFailedExcep
 import gridsearch.classifier.setup.ClassifierDescriptionGenerator;
 
 public class GridSearchExperimentRunner {
-	public static void main(final String[] args) throws IOException, ExperimentDBInteractionFailedException {
+	public static void main(final String[] args) throws IOException, ExperimentDBInteractionFailedException, InterruptedException {
 
 		/* read limit from standard input */
 		int limit = Integer.parseInt(args[0]);
